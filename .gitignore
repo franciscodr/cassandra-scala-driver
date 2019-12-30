@@ -1,2 +1,25 @@
+# sbt
+bin/
+project/
+target/
+build/
+
+# eclipse
+build
+.classpath
+.project
+.settings
+.worksheet
+
+# mac
+.DS_Store
+
+# intellij idea
+*.log
+*.iml
+*.ipr
+*.iws
+.idea
+
 *.class
 *.log
