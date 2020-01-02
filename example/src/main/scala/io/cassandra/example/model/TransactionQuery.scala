@@ -3,10 +3,8 @@ package io.cassandra.example.model
 import java.time.Instant
 import java.util.UUID
 
-import cats.effect.{IO, Sync}
+import cats.effect.IO
 import cats.effect.IO._
-import cats.effect.concurrent.Ref
-import cats.syntax.functor._
 import com.datastax.oss.driver.api.core.CqlIdentifier
 import com.datastax.oss.driver.api.core.cql._
 import com.datastax.oss.driver.api.querybuilder.QueryBuilder
@@ -15,22 +13,11 @@ import io.cassandra.error.ResultNotFound
 import io.cassandra.{AsyncResultSet, CatsEffectConverters, Session}
 import io.chrisdavenport.log4cats.Logger
 
-final class Counter[F[_]](private val ref: Ref[F, Long]) {
-  def increment: F[Unit] = ref.update(_ + 1)
-
-  def decrement: F[Unit] = ref.update(_ - 1)
-
-  def get: F[Long] = ref.get
-}
-
-object Counter {
-  def apply[F[_]: Sync]: F[Counter[F]] = Ref.of[F, Long](0L).map(new Counter(_))
-}
-
 case class TransactionQuery(
   session: Session[IO],
   countStatement: PreparedStatement,
   insertStatement: PreparedStatement,
+  selectPaymentMethodStatement: PreparedStatement,
   selectStatement: PreparedStatement,
   selectStatementByPrimaryKey: PreparedStatement)(
   implicit logger: Logger[IO]
@@ -87,21 +74,38 @@ case class TransactionQuery(
       .drop(offset * limit)
       .take(limit)
 
-  def selectTransactionsByAccountIdAndPaymentMethod(
+  private[this] def selectTransactionsByAccountIdWithFilter(
     accountId: UUID,
-    paymentMethod: PaymentMethod,
-    limit: Long = 50,
-    offset: Long = 0): fs2.Stream[IO, Transaction] =
+    predicate: Transaction => Boolean,
+    limit: Long,
+    offset: Long): fs2.Stream[IO, Transaction] =
     fetchTransactionsByAccountId(accountId)
-      .filter(_.paymentMethod.equals(paymentMethod))
+      .filter(predicate)
       .drop(offset * limit)
       .take(limit)
+
+  def selectTransactionsByAccountIdAndPaymentMethod(
+    accountId: UUID,
+    paymentMethods: List[PaymentMethod],
+    limit: Long = 50,
+    offset: Long = 0): fs2.Stream[IO, Transaction] =
+    if (paymentMethods.isEmpty)
+      selectTransactionsByAccountId(accountId, limit, offset)
+    else
+      selectTransactionsByAccountIdWithFilter(
+        accountId = accountId,
+        predicate = transaction => paymentMethods.contains(transaction.paymentMethod),
+        limit = limit,
+        offset = offset)
 
   def countTransactionsByAccountIdAndPaymentMethod(
     accountId: UUID,
     paymentMethod: PaymentMethod): fs2.Stream[IO, Int] =
-    fetchTransactionsByAccountId(accountId)
-      .filter(_.paymentMethod.equals(paymentMethod))
+    fs2.Stream
+      .eval(session.execute(selectPaymentMethodStatement.bind().setUuid("account_id", accountId)))
+      .flatMap(_.asStream)
+      .map(row => PaymentMethod.withNameOption(row.getString("payment_method")))
+      .filter(_.contains(paymentMethod))
       .as(1)
       .fold(0)(_ + _)
 }
@@ -116,6 +120,7 @@ object TransactionQuery extends CatsEffectConverters {
     for {
       countStatement <- countByAccountIdPreparedStatement(session)
       insertStatement <- insertPreparedStatement(session)
+      selectPaymentMethodStatement <- selectPaymentMethodByAccountIdPreparedStatement(session)
       selectStatement <- selectByAccountIdPreparedStatement(session)
       selectByPrimaryKeyStatement <- selectByPrimaryKeyPreparedStatement(session)
     } yield
@@ -123,6 +128,7 @@ object TransactionQuery extends CatsEffectConverters {
         session,
         countStatement,
         insertStatement,
+        selectPaymentMethodStatement,
         selectStatement,
         selectByPrimaryKeyStatement)
 
@@ -149,6 +155,17 @@ object TransactionQuery extends CatsEffectConverters {
           .value(CqlIdentifier.fromCql("amount"), bindMarker)
           .value(CqlIdentifier.fromCql("payment_method"), bindMarker)
           .build)
+
+  def selectPaymentMethodByAccountIdPreparedStatement(session: Session[IO]): IO[PreparedStatement] =
+    session
+      .prepare(
+        QueryBuilder
+          .selectFrom(CqlIdentifier.fromCql("transaction"))
+          .column("payment_method")
+          .whereColumn("account_id")
+          .isEqualTo(bindMarker)
+          .build()
+      )
 
   def selectByAccountIdPreparedStatement(session: Session[IO]): IO[PreparedStatement] =
     session

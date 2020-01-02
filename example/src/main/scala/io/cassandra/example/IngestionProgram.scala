@@ -12,7 +12,7 @@ object IngestionProgram extends IOApp {
     for {
       implicit0(logger: Logger[IO]) <- fs2.Stream.eval(Slf4jLogger.create[IO])
       session <- Session
-        .buildAsStream("customers")
+        .buildAsStream("customer")
         .evalTap(_ => logger.info("Database session opened"))
       query <- TransactionQuery
         .buildAsStream(session)

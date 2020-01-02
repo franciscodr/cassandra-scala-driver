@@ -7,7 +7,7 @@ import scala.collection.immutable.IndexedSeq
 
 sealed trait PaymentMethod extends EnumEntry
 
-object PaymentMethod extends Enum[PaymentMethod] {
+object PaymentMethod extends Enum[PaymentMethod] with CirceEnum[PaymentMethod] {
   val values: IndexedSeq[PaymentMethod] = findValues
 
   case object ApplePay extends PaymentMethod

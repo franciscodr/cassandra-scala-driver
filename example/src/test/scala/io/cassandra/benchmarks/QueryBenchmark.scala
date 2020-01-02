@@ -21,18 +21,18 @@ object QueryBenchmark extends Bench.LocalTime {
 
   implicit val logger: Logger[IO] = Slf4jLogger.create[IO].unsafeRunSync()
   val (session, releaseSession) =
-    Session.build("customers").allocated.unsafeRunSync()
+    Session.build("customer").allocated.unsafeRunSync()
   val query: TransactionQuery = TransactionQuery.build(session).unsafeRunSync()
 
   performance of "Cassandra driver" in {
     measure method "selectTransactionsByAccountIdAndPaymentMethod" in {
       using(offsetAndLimit) in {
         case (offset, limit) =>
-          println(s"Using offset $offset and limit $limit...")
+          logger.debug(s"Using offset $offset and limit $limit...")
           query
             .selectTransactionsByAccountIdAndPaymentMethod(
-              UUID.fromString("bf010fcc-928a-42ed-995c-577171e07ae9"),
-              CreditCard,
+              UUID.fromString("e1e597f7-3470-42a5-8df6-22623faed800"),
+              List(CreditCard),
               limit,
               offset)
             .compile
@@ -43,10 +43,10 @@ object QueryBenchmark extends Bench.LocalTime {
 
     measure method "countTransactionsByAccountIdAndPaymentMethod" in {
       using(paymentMethods) in { paymentMethod =>
-        println(s"Using paymentMethod $paymentMethod...")
+        logger.debug(s"Using paymentMethod $paymentMethod...")
         query
           .countTransactionsByAccountIdAndPaymentMethod(
-            UUID.fromString("bf010fcc-928a-42ed-995c-577171e07ae9"),
+            UUID.fromString("e1e597f7-3470-42a5-8df6-22623faed800"),
             paymentMethod)
           .compile
           .toList
@@ -55,11 +55,9 @@ object QueryBenchmark extends Bench.LocalTime {
     }
 
     measure method "countByAccountId" in {
-      using(
-        Gen.single("AccountId")(
-          UUID.fromString("bf010fcc-928a-42ed-995c-577171e07ae9"))) in {
+      using(Gen.single("AccountId")(UUID.fromString("e1e597f7-3470-42a5-8df6-22623faed800"))) in {
         accountId =>
-          println(s"Getting count by account id...")
+          logger.debug(s"Getting count by account id...")
           query
             .countByAccountId(accountId)
             .unsafeRunSync()
