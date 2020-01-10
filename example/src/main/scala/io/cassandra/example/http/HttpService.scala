@@ -15,7 +15,7 @@ object HttpService extends IOApp {
   override def run(args: List[String]): IO[ExitCode] = {
     val ingestionStream = for {
       implicit0(logger: Logger[IO]) <- fs2.Stream.eval(Slf4jLogger.create[IO])
-      session <- Session.buildAsStream("customer")
+      session <- Session.buildAsStream("customer", 500)
       query <- TransactionQuery.buildAsStream(session)
       stream <- BlazeServerBuilder[IO]
         .bindHttp(8080, "0.0.0.0")

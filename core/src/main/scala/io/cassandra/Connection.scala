@@ -13,13 +13,15 @@ import com.datastax.oss.driver.internal.core.retry.DefaultRetryPolicy
 import scala.collection.JavaConverters._
 
 object Connection extends CatsEffectConverters {
-  def buildConnectionAsStream(keyspace: String): fs2.Stream[IO, DseSession] = {
+  def buildConnectionAsStream(
+    keyspace: String,
+    requestPageSize: Int): fs2.Stream[IO, DseSession] = {
     val driverConfigLoader = DseDriverConfigLoader.programmaticBuilder
       .withClass(DefaultDriverOption.AUTH_PROVIDER_CLASS, classOf[DsePlainTextAuthProvider])
       .withString(DefaultDriverOption.AUTH_PROVIDER_USER_NAME, "cassandra")
       .withString(DefaultDriverOption.AUTH_PROVIDER_PASSWORD, "cassandra")
       .withString(DefaultDriverOption.REQUEST_CONSISTENCY, DefaultConsistencyLevel.LOCAL_ONE.name)
-      .withInt(DefaultDriverOption.REQUEST_PAGE_SIZE, 500)
+      .withInt(DefaultDriverOption.REQUEST_PAGE_SIZE, requestPageSize)
       .withClass(DefaultDriverOption.LOAD_BALANCING_POLICY_CLASS, classOf[DseLoadBalancingPolicy])
       .withClass(DefaultDriverOption.RETRY_POLICY_CLASS, classOf[DefaultRetryPolicy])
       .withStringList(DefaultDriverOption.CONTACT_POINTS, List("localhost").asJava)
@@ -34,13 +36,15 @@ object Connection extends CatsEffectConverters {
       fromCompletionStage[IO](session.closeAsync.toCompletableFuture).as(()))
   }
 
-  def buildConnectionAsResource(keyspace: String): Resource[IO, DseSession] = {
+  def buildConnectionAsResource(
+    keyspace: String,
+    requestPageSize: Int): Resource[IO, DseSession] = {
     val driverConfigLoader = DseDriverConfigLoader.programmaticBuilder
       .withClass(DefaultDriverOption.AUTH_PROVIDER_CLASS, classOf[DsePlainTextAuthProvider])
       .withString(DefaultDriverOption.AUTH_PROVIDER_USER_NAME, "cassandra")
       .withString(DefaultDriverOption.AUTH_PROVIDER_PASSWORD, "cassandra")
       .withString(DefaultDriverOption.REQUEST_CONSISTENCY, DefaultConsistencyLevel.LOCAL_ONE.name)
-      .withInt(DefaultDriverOption.REQUEST_PAGE_SIZE, 500)
+      .withInt(DefaultDriverOption.REQUEST_PAGE_SIZE, requestPageSize)
       .withClass(DefaultDriverOption.LOAD_BALANCING_POLICY_CLASS, classOf[DseLoadBalancingPolicy])
       .withClass(DefaultDriverOption.RETRY_POLICY_CLASS, classOf[DefaultRetryPolicy])
       .withStringList(DefaultDriverOption.CONTACT_POINTS, List("localhost").asJava)

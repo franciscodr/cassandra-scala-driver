@@ -69,8 +69,10 @@ lazy val core = (project in file("core"))
       "com.datastax.dse" % "dse-java-driver-core" % "2.3.0",
       "com.datastax.dse" % "dse-java-driver-query-builder" % "2.3.0",
       "co.fs2" %% "fs2-core" % "2.1.0",
+      "co.fs2" %% "fs2-reactive-streams" % "2.1.0",
       "io.chrisdavenport" %% "log4cats-core" % "1.0.1",
       "io.chrisdavenport" %% "log4cats-slf4j" % "1.0.1",
+      "org.reactivestreams" % "reactive-streams" % "1.0.3",
       "org.scala-lang.modules" % "scala-java8-compat_2.12" % "0.9.0",
       "org.typelevel" %% "cats-core" % "2.1.0",
       "org.typelevel" %% "cats-effect" % "2.0.0"

@@ -10,14 +10,14 @@ import org.http4s.dsl.io._
 
 class ServiceApi(query: TransactionQuery) extends QueryParamMatchers {
 
-  implicit def transactionEncoder: EntityEncoder[IO, Transaction] = jsonEncoderOf[IO, Transaction]
-
   implicit def transactionsEncoder: EntityEncoder[IO, List[Transaction]] =
     jsonEncoderOf[IO, List[Transaction]]
 
   val httpService: HttpRoutes[IO] = HttpRoutes.of[IO] {
-    case _ @GET -> Root / "order" / accountId :? PaymentMethodsQueryParamMatcher(paymentMethods) +& LimitQueryParamMatcher(
-          limit) +& OffsetQueryParamMatcher(offset) => {
+    case _ @GET -> Root / "order" / accountId
+          :? PaymentMethodsQueryParamMatcher(paymentMethods)
+            +& LimitQueryParamMatcher(limit)
+            +& OffsetQueryParamMatcher(offset) => {
       for {
         transactions <- query
           .selectTransactionsByAccountIdAndPaymentMethod(

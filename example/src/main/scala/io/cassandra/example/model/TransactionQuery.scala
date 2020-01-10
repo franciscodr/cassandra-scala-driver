@@ -5,6 +5,7 @@ import java.util.UUID
 
 import cats.effect.IO
 import cats.effect.IO._
+import com.datastax.dse.driver.api.core.cql.reactive.ReactiveRow
 import com.datastax.oss.driver.api.core.CqlIdentifier
 import com.datastax.oss.driver.api.core.cql._
 import com.datastax.oss.driver.api.querybuilder.QueryBuilder
@@ -15,10 +16,10 @@ import io.chrisdavenport.log4cats.Logger
 
 case class TransactionQuery(
   session: Session[IO],
-  countStatement: PreparedStatement,
+  countStatementByAccountId: PreparedStatement,
   insertStatement: PreparedStatement,
   selectPaymentMethodStatement: PreparedStatement,
-  selectStatement: PreparedStatement,
+  selectStatementByAccountId: PreparedStatement,
   selectStatementByPrimaryKey: PreparedStatement)(
   implicit logger: Logger[IO]
 ) extends CatsEffectConverters {
@@ -26,11 +27,32 @@ case class TransactionQuery(
   def countByAccountId(accountId: UUID): IO[Long] =
     session
       .execute(
-        countStatement
+        countStatementByAccountId
           .bind()
           .setUuid("account_id", accountId)
       )
       .map(_.oneOrNone.map(_.getLong("count")).getOrElse(0L))
+
+  def countTransactionsByAccountIdAndPaymentMethod(
+    accountId: UUID,
+    paymentMethod: PaymentMethod): fs2.Stream[IO, Int] =
+    fs2.Stream
+      .eval(session.execute(selectPaymentMethodStatement.bind().setUuid("account_id", accountId)))
+      .flatMap(_.asStream)
+      .map(row => PaymentMethod.withNameOption(row.getString("payment_method")))
+      .filter(_.contains(paymentMethod))
+      .as(1)
+      .fold(0)(_ + _)
+
+  def nativeCountTransactionsByAccountIdAndPaymentMethod(
+    accountId: UUID,
+    paymentMethod: PaymentMethod): fs2.Stream[IO, Int] =
+    session
+      .executeStream(selectPaymentMethodStatement.bind().setUuid("account_id", accountId))
+      .map(row => PaymentMethod.withNameOption(row.getString("payment_method")))
+      .filter(_.contains(paymentMethod))
+      .as(1)
+      .fold(0)(_ + _)
 
   def insertTransaction(transaction: Transaction): IO[AsyncResultSet] =
     session
@@ -44,11 +66,14 @@ case class TransactionQuery(
           .setString("payment_method", transaction.paymentMethod.entryName)
       )
 
-  private[this] def fetchTransactionsByAccountId(accountId: UUID): fs2.Stream[IO, Transaction] =
+  private[this] def fetchTransactionsByAccountId(accountId: UUID): fs2.Stream[IO, Row] =
     fs2.Stream
-      .eval(session.execute(selectStatement.bind().setUuid("account_id", accountId)))
+      .eval(session.execute(selectStatementByAccountId.bind().setUuid("account_id", accountId)))
       .flatMap(_.asStream)
-      .evalMap(Transaction.fromRow[IO])
+
+  private[this] def nativeFetchTransactionsByAccountId(
+    accountId: UUID): fs2.Stream[IO, ReactiveRow] =
+    session.executeStream(selectStatementByAccountId.bind().setUuid("account_id", accountId))
 
   def selectTransactionByPrimaryKey(
     accountId: UUID,
@@ -71,8 +96,18 @@ case class TransactionQuery(
     limit: Long = 50,
     offset: Long = 0): fs2.Stream[IO, Transaction] =
     fetchTransactionsByAccountId(accountId)
-      .drop(offset * limit)
+      .drop(offset)
       .take(limit)
+      .evalMap(Transaction.fromRow[IO]) // At most "limit" elements
+
+  def nativeSelectTransactionsByAccountId(
+    accountId: UUID,
+    limit: Long = 50,
+    offset: Long = 0): fs2.Stream[IO, Transaction] =
+    nativeFetchTransactionsByAccountId(accountId)
+      .drop(offset)
+      .take(limit)
+      .evalMap(Transaction.fromRow[IO]) // At most "limit" elements
 
   private[this] def selectTransactionsByAccountIdWithFilter(
     accountId: UUID,
@@ -80,8 +115,20 @@ case class TransactionQuery(
     limit: Long,
     offset: Long): fs2.Stream[IO, Transaction] =
     fetchTransactionsByAccountId(accountId)
+      .evalMap(Transaction.fromRow[IO])
       .filter(predicate)
-      .drop(offset * limit)
+      .drop(offset)
+      .take(limit)
+
+  private[this] def nativeSelectTransactionsByAccountIdWithFilter(
+    accountId: UUID,
+    predicate: Transaction => Boolean,
+    limit: Long,
+    offset: Long): fs2.Stream[IO, Transaction] =
+    nativeFetchTransactionsByAccountId(accountId)
+      .evalMap(Transaction.fromRow[IO])
+      .filter(predicate)
+      .drop(offset)
       .take(limit)
 
   def selectTransactionsByAccountIdAndPaymentMethod(
@@ -98,16 +145,19 @@ case class TransactionQuery(
         limit = limit,
         offset = offset)
 
-  def countTransactionsByAccountIdAndPaymentMethod(
+  def nativeSelectTransactionsByAccountIdAndPaymentMethod(
     accountId: UUID,
-    paymentMethod: PaymentMethod): fs2.Stream[IO, Int] =
-    fs2.Stream
-      .eval(session.execute(selectPaymentMethodStatement.bind().setUuid("account_id", accountId)))
-      .flatMap(_.asStream)
-      .map(row => PaymentMethod.withNameOption(row.getString("payment_method")))
-      .filter(_.contains(paymentMethod))
-      .as(1)
-      .fold(0)(_ + _)
+    paymentMethods: List[PaymentMethod],
+    limit: Long = 50,
+    offset: Long = 0): fs2.Stream[IO, Transaction] =
+    if (paymentMethods.isEmpty)
+      nativeSelectTransactionsByAccountId(accountId, limit, offset)
+    else
+      nativeSelectTransactionsByAccountIdWithFilter(
+        accountId = accountId,
+        predicate = transaction => paymentMethods.contains(transaction.paymentMethod),
+        limit = limit,
+        offset = offset)
 }
 
 object TransactionQuery extends CatsEffectConverters {
@@ -118,7 +168,7 @@ object TransactionQuery extends CatsEffectConverters {
 
   def build(session: Session[IO])(implicit logger: Logger[IO]): IO[TransactionQuery] =
     for {
-      countStatement <- countByAccountIdPreparedStatement(session)
+      countStatementByAccountId <- countByAccountIdPreparedStatement(session)
       insertStatement <- insertPreparedStatement(session)
       selectPaymentMethodStatement <- selectPaymentMethodByAccountIdPreparedStatement(session)
       selectStatement <- selectByAccountIdPreparedStatement(session)
@@ -126,11 +176,12 @@ object TransactionQuery extends CatsEffectConverters {
     } yield
       TransactionQuery(
         session,
-        countStatement,
+        countStatementByAccountId,
         insertStatement,
         selectPaymentMethodStatement,
         selectStatement,
-        selectByPrimaryKeyStatement)
+        selectByPrimaryKeyStatement
+      )
 
   def countByAccountIdPreparedStatement(session: Session[IO]): IO[PreparedStatement] =
     session

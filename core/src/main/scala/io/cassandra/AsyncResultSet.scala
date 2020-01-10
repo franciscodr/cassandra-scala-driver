@@ -16,22 +16,26 @@ case class AsyncResultSet(resultSet: JavaAsyncResultSet) extends AnyVal {
 
   def asStream[F[_]: Async: Logger]: Stream[F, Row] =
     fs2.Stream
-      .unfoldEval(this) { resultSet =>
-        if (resultSet.hasMorePages)
-          Logger[F]
-            .debug("Fetching from database")
-            .flatMap(
-              _ =>
-                resultSet
-                  .fetchNextPage[F]
-                  .map { rs =>
-                    (
-                      resultSet.currentPage,
-                      rs
-                    ).some
-                })
-        else
-          none[(Iterator[Row], AsyncResultSet)].pure[F]
+      .unfoldEval(Option(this)) {
+        case Some(resultSet) =>
+          if (resultSet.hasMorePages)
+            Logger[F]
+              .debug("Fetching from database")
+              .flatMap(
+                _ =>
+                  resultSet
+                    .fetchNextPage[F]
+                    .map { rs =>
+                      (
+                        resultSet.currentPage,
+                        rs.some
+                      ).some
+                  }
+              )
+          else
+            (resultSet.currentPage, none[AsyncResultSet]).some.pure[F]
+        case None =>
+          none[(Iterator[Row], Option[AsyncResultSet])].pure[F]
       }
       .flatMap(fs2.Stream.fromIterator[F].apply)
 

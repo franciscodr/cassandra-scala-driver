@@ -42,7 +42,7 @@ object Transaction {
       )
 
   implicit val generator: Gen[List[Transaction]] =
-    Gen.uuid.flatMap(accountId => Gen.listOfN(25000, transactionGenerator(accountId)))
+    Gen.uuid.flatMap(accountId => Gen.listOfN(1000, transactionGenerator(accountId)))
 
   def fromRow[F[_]](row: Row)(implicit AE: ApplicativeError[F, Throwable]): F[Transaction] =
     AE.fromOption(
