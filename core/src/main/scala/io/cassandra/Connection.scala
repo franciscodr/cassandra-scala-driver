@@ -15,7 +15,8 @@ import scala.collection.JavaConverters._
 object Connection extends CatsEffectConverters {
   def buildConnectionAsStream(
     keyspace: String,
-    requestPageSize: Int): fs2.Stream[IO, DseSession] = {
+    requestPageSize: Int
+  ): fs2.Stream[IO, DseSession] = {
     val driverConfigLoader = DseDriverConfigLoader.programmaticBuilder
       .withClass(DefaultDriverOption.AUTH_PROVIDER_CLASS, classOf[DsePlainTextAuthProvider])
       .withString(DefaultDriverOption.AUTH_PROVIDER_USER_NAME, "cassandra")
@@ -32,13 +33,15 @@ object Connection extends CatsEffectConverters {
         DseSession.builder
           .withConfigLoader(driverConfigLoader)
           .withKeyspace(keyspace)
-          .buildAsync))(session =>
-      fromCompletionStage[IO](session.closeAsync.toCompletableFuture).as(()))
+          .buildAsync
+      )
+    )(session => fromCompletionStage[IO](session.closeAsync.toCompletableFuture).as(()))
   }
 
   def buildConnectionAsResource(
     keyspace: String,
-    requestPageSize: Int): Resource[IO, DseSession] = {
+    requestPageSize: Int
+  ): Resource[IO, DseSession] = {
     val driverConfigLoader = DseDriverConfigLoader.programmaticBuilder
       .withClass(DefaultDriverOption.AUTH_PROVIDER_CLASS, classOf[DsePlainTextAuthProvider])
       .withString(DefaultDriverOption.AUTH_PROVIDER_USER_NAME, "cassandra")
@@ -55,7 +58,8 @@ object Connection extends CatsEffectConverters {
         DseSession.builder
           .withConfigLoader(driverConfigLoader)
           .withKeyspace(keyspace)
-          .buildAsync))(session =>
-      fromCompletionStage[IO](session.closeAsync.toCompletableFuture).as(()))
+          .buildAsync
+      )
+    )(session => fromCompletionStage[IO](session.closeAsync.toCompletableFuture).as(()))
   }
 }

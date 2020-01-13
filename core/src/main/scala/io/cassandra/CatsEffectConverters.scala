@@ -13,7 +13,8 @@ trait CatsEffectConverters {
           Option(exception) match {
             case None => cb(Right(value))
             case Some(e) => cb(Left(e))
-        })
+          }
+        )
       }
   }
 

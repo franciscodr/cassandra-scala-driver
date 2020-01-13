@@ -6,7 +6,7 @@ import java.util.concurrent.Executors
 import cats.effect.{ContextShift, IO}
 import io.cassandra.Session
 import io.cassandra.example.model.PaymentMethod.ApplePay
-import io.cassandra.example.model.{PaymentMethod, TransactionQuery}
+import io.cassandra.example.model.{NativeTransactionQuery, PaymentMethod, TransactionQuery}
 import io.chrisdavenport.log4cats.Logger
 import io.chrisdavenport.log4cats.slf4j.Slf4jLogger
 import org.scalameter.api._
@@ -37,6 +37,11 @@ object QueryBenchmark extends Bench.LocalTime {
   val queryForLargeQueries: TransactionQuery =
     TransactionQuery.build(sessionForLargeQueries).unsafeRunSync()
 
+  val nativeQuery: NativeTransactionQuery = NativeTransactionQuery.build(session).unsafeRunSync()
+
+  val nativeQueryForLargeQueries: NativeTransactionQuery =
+    NativeTransactionQuery.build(sessionForLargeQueries).unsafeRunSync()
+
   performance of "Cassandra driver" in {
     measure method "selectTransactionsByAccountIdAndPaymentMethod" in {
       using(offsetAndLimit) in {
@@ -47,7 +52,8 @@ object QueryBenchmark extends Bench.LocalTime {
               UUID.fromString("9158b076-38a2-480e-a1fe-32efc2448ac1"),
               List(ApplePay),
               limit,
-              offset)
+              offset
+            )
             .compile
             .toList
             .unsafeRunSync()
@@ -60,7 +66,8 @@ object QueryBenchmark extends Bench.LocalTime {
         queryForLargeQueries
           .countTransactionsByAccountIdAndPaymentMethod(
             UUID.fromString("9158b076-38a2-480e-a1fe-32efc2448ac1"),
-            paymentMethod)
+            paymentMethod
+          )
           .compile
           .toList
           .unsafeRunSync()
@@ -83,12 +90,13 @@ object QueryBenchmark extends Bench.LocalTime {
       using(offsetAndLimit) in {
         case (offset, limit) =>
           logger.debug(s"Using offset $offset and limit $limit...")
-          query
-            .nativeSelectTransactionsByAccountIdAndPaymentMethod(
+          nativeQuery
+            .selectTransactionsByAccountIdAndPaymentMethod(
               UUID.fromString("9158b076-38a2-480e-a1fe-32efc2448ac1"),
               List(ApplePay),
               limit,
-              offset)
+              offset
+            )
             .compile
             .toList
             .unsafeRunSync()
@@ -98,10 +106,11 @@ object QueryBenchmark extends Bench.LocalTime {
     measure method "countTransactionsByAccountIdAndPaymentMethod" in {
       using(paymentMethods) in { paymentMethod =>
         logger.debug(s"Using paymentMethod $paymentMethod...")
-        queryForLargeQueries
-          .nativeCountTransactionsByAccountIdAndPaymentMethod(
+        nativeQueryForLargeQueries
+          .countTransactionsByAccountIdAndPaymentMethod(
             UUID.fromString("9158b076-38a2-480e-a1fe-32efc2448ac1"),
-            paymentMethod)
+            paymentMethod
+          )
           .compile
           .toList
           .unsafeRunSync()
@@ -112,7 +121,7 @@ object QueryBenchmark extends Bench.LocalTime {
       using(Gen.single("AccountId")(UUID.fromString("9158b076-38a2-480e-a1fe-32efc2448ac1"))) in {
         accountId =>
           logger.debug(s"Getting count by account id...")
-          query
+          nativeQuery
             .countByAccountId(accountId)
             .unsafeRunSync()
       }

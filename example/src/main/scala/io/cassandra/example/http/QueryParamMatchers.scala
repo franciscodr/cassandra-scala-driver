@@ -20,7 +20,8 @@ trait QueryParamMatchers {
             PaymentMethod.withNameInsensitiveOption(value.value),
             ParseFailure(
               "Failed to parse PaymentMethod query parameter",
-              s"Could not parse ${value.value} as a payment method")
+              s"Could not parse ${value.value} as a payment method"
+            )
           )
           .toValidatedNel
     }
@@ -28,7 +29,8 @@ trait QueryParamMatchers {
   implicit val paymentMethodsQueryParamDecoder: QueryParamDecoder[List[PaymentMethod]] =
     new QueryParamDecoder[List[PaymentMethod]] {
       override def decode(
-        value: QueryParameterValue): ValidatedNel[ParseFailure, List[PaymentMethod]] =
+        value: QueryParameterValue
+      ): ValidatedNel[ParseFailure, List[PaymentMethod]] =
         value.value.trim
           .split(",")
           .toList

@@ -21,15 +21,14 @@ case class AsyncResultSet(resultSet: JavaAsyncResultSet) extends AnyVal {
           if (resultSet.hasMorePages)
             Logger[F]
               .debug("Fetching from database")
-              .flatMap(
-                _ =>
-                  resultSet
-                    .fetchNextPage[F]
-                    .map { rs =>
-                      (
-                        resultSet.currentPage,
-                        rs.some
-                      ).some
+              .flatMap(_ =>
+                resultSet
+                  .fetchNextPage[F]
+                  .map { rs =>
+                    (
+                      resultSet.currentPage,
+                      rs.some
+                    ).some
                   }
               )
           else

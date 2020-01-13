@@ -14,7 +14,7 @@ import io.cassandra.error.ResultNotFound
 import io.cassandra.{AsyncResultSet, CatsEffectConverters, Session}
 import io.chrisdavenport.log4cats.Logger
 
-case class TransactionQuery(
+case class NativeTransactionQuery(
   session: Session[IO],
   countStatementByAccountId: PreparedStatement,
   insertStatement: PreparedStatement,
@@ -22,8 +22,6 @@ case class TransactionQuery(
   selectStatementByAccountId: PreparedStatement,
   selectByAccountIdAndModifiedSince: PreparedStatement,
   selectStatementByPrimaryKey: PreparedStatement
-)(
-  implicit logger: Logger[IO]
 ) extends CatsEffectConverters {
 
   def countByAccountId(accountId: UUID): IO[Long] =
@@ -39,9 +37,8 @@ case class TransactionQuery(
     accountId: UUID,
     paymentMethod: PaymentMethod
   ): fs2.Stream[IO, Int] =
-    fs2.Stream
-      .eval(session.execute(selectPaymentMethodStatement.bind().setUuid("account_id", accountId)))
-      .flatMap(_.asStream)
+    session
+      .executeStream(selectPaymentMethodStatement.bind().setUuid("account_id", accountId))
       .map(row => PaymentMethod.withNameOption(row.getString("payment_method")))
       .filter(_.contains(paymentMethod))
       .as(1)
@@ -59,25 +56,19 @@ case class TransactionQuery(
           .setString("payment_method", transaction.paymentMethod.entryName)
       )
 
-  private[this] def fetchTransactionsByAccountId(accountId: UUID): fs2.Stream[IO, Row] =
-    fs2.Stream
-      .eval(session.execute(selectStatementByAccountId.bind().setUuid("account_id", accountId)))
-      .flatMap(_.asStream)
+  private[this] def fetchTransactionsByAccountId(accountId: UUID): fs2.Stream[IO, ReactiveRow] =
+    session.executeStream(selectStatementByAccountId.bind().setUuid("account_id", accountId))
 
   private[this] def fetchTransactionsByAccountIdAndModifiedSince(
     accountId: UUID,
     modifiedSince: Instant
   ): fs2.Stream[IO, Row] =
-    fs2.Stream
-      .eval(
-        session.execute(
-          selectByAccountIdAndModifiedSince
-            .bind()
-            .setUuid("account_id", accountId)
-            .setInstant("order_at", modifiedSince)
-        )
-      )
-      .flatMap(_.asStream)
+    session.executeStream(
+      selectByAccountIdAndModifiedSince
+        .bind()
+        .setUuid("account_id", accountId)
+        .setInstant("order_at", modifiedSince)
+    )
 
   def selectTransactionByPrimaryKey(
     accountId: UUID,
@@ -178,14 +169,12 @@ case class TransactionQuery(
       )
 }
 
-object TransactionQuery extends CatsEffectConverters {
+object NativeTransactionQuery extends CatsEffectConverters {
 
-  def buildAsStream(
-    session: Session[IO]
-  )(implicit logger: Logger[IO]): fs2.Stream[IO, TransactionQuery] =
+  def buildAsStream(session: Session[IO]): fs2.Stream[IO, NativeTransactionQuery] =
     fs2.Stream.eval(build(session))
 
-  def build(session: Session[IO])(implicit logger: Logger[IO]): IO[TransactionQuery] =
+  def build(session: Session[IO]): IO[NativeTransactionQuery] =
     for {
       countStatementByAccountId <- countByAccountIdPreparedStatement(session)
       insertStatement <- insertPreparedStatement(session)
@@ -195,7 +184,7 @@ object TransactionQuery extends CatsEffectConverters {
         session
       )
       selectByPrimaryKeyStatement <- selectByPrimaryKeyPreparedStatement(session)
-    } yield TransactionQuery(
+    } yield NativeTransactionQuery(
       session,
       countStatementByAccountId,
       insertStatement,

@@ -54,13 +54,15 @@ class Session[F[_]: ConcurrentEffect](session: DseSession) extends CatsEffectCon
 
 object Session {
   def buildAsStream(keyspace: String, requestPageSize: Int)(
-    implicit CS: ContextShift[IO]): fs2.Stream[IO, Session[IO]] =
+    implicit CS: ContextShift[IO]
+  ): fs2.Stream[IO, Session[IO]] =
     Connection
       .buildConnectionAsStream(keyspace, requestPageSize)
       .map(connection => new Session[IO](connection))
 
   def build(keyspace: String, requestPageSize: Int)(
-    implicit CS: ContextShift[IO]): Resource[IO, Session[IO]] =
+    implicit CS: ContextShift[IO]
+  ): Resource[IO, Session[IO]] =
     Connection
       .buildConnectionAsResource(keyspace, requestPageSize)
       .map(connection => new Session[IO](connection))
