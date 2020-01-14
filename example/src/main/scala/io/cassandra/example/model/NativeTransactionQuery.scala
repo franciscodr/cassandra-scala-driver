@@ -12,7 +12,6 @@ import com.datastax.oss.driver.api.querybuilder.QueryBuilder
 import com.datastax.oss.driver.api.querybuilder.QueryBuilder.bindMarker
 import io.cassandra.error.ResultNotFound
 import io.cassandra.{AsyncResultSet, CatsEffectConverters, Session}
-import io.chrisdavenport.log4cats.Logger
 
 case class NativeTransactionQuery(
   session: Session[IO],

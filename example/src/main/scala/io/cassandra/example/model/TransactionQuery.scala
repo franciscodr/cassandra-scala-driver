@@ -5,7 +5,6 @@ import java.util.UUID
 
 import cats.effect.IO
 import cats.effect.IO._
-import com.datastax.dse.driver.api.core.cql.reactive.ReactiveRow
 import com.datastax.oss.driver.api.core.CqlIdentifier
 import com.datastax.oss.driver.api.core.cql._
 import com.datastax.oss.driver.api.querybuilder.QueryBuilder
