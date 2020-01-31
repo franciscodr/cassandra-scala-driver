@@ -13,15 +13,15 @@ import com.datastax.oss.driver.api.core.cql.{
   Statement
 }
 import fs2.interop.reactivestreams._
+import io.cassandra.config.CassandraConfig
 
 import scala.compat.java8.OptionConverters
 
 class Session[F[_]: ConcurrentEffect](session: DseSession) extends CatsEffectConverters {
-
   def checkSchemaAgreement: F[Boolean] =
     fromCompletionStage[F](session.checkSchemaAgreementAsync()).map(b => Boolean.box(b))
 
-  def close: F[Unit] = fromCompletionStage[F](session.closeAsync()).as(())
+  def close: F[Unit] = fromCompletionStage[F](session.closeAsync()).void
 
   def execute(query: String): F[AsyncResultSet] =
     fromCompletionStage[F](session.executeAsync(query))
@@ -53,17 +53,17 @@ class Session[F[_]: ConcurrentEffect](session: DseSession) extends CatsEffectCon
 }
 
 object Session {
-  def buildAsStream(keyspace: String, requestPageSize: Int)(
+  def buildAsStream(config: CassandraConfig, requestPageSize: Int)(
     implicit CS: ContextShift[IO]
   ): fs2.Stream[IO, Session[IO]] =
     Connection
-      .buildConnectionAsStream(keyspace, requestPageSize)
+      .buildConnectionAsStream(config, requestPageSize)
       .map(connection => new Session[IO](connection))
 
-  def build(keyspace: String, requestPageSize: Int)(
+  def build(config: CassandraConfig, requestPageSize: Int)(
     implicit CS: ContextShift[IO]
   ): Resource[IO, Session[IO]] =
     Connection
-      .buildConnectionAsResource(keyspace, requestPageSize)
+      .buildConnectionAsResource(config, requestPageSize)
       .map(connection => new Session[IO](connection))
 }
