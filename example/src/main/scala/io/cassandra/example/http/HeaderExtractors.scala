@@ -5,7 +5,7 @@ import java.time.Instant
 import cats.effect.IO
 import cats.syntax.either._
 import cats.syntax.option._
-import org.http4s.{MediaType, Request}
+import org.http4s.Request
 import org.http4s.util.CaseInsensitiveString
 
 trait HeaderExtractors {
@@ -20,14 +20,4 @@ trait HeaderExtractors {
             instant => instant.some
           )
       )
-
-  def extractAcceptHeader(request: Request[IO]): ContentType =
-    request.headers
-      .get(org.http4s.headers.Accept)
-      .map(header =>
-        if (header.value == MediaType.application.xml.mainType + "/" + MediaType.application.xml.subType)
-          Xml
-        else Json
-      )
-      .getOrElse(Json)
 }

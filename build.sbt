@@ -42,12 +42,12 @@ lazy val commonSettings = Seq(
     "-Ywarn-nullary-unit", // Warn when nullary methods return Unit.
     "-Ywarn-numeric-widen", // Warn when numerics are widened.
     "-Ywarn-unused:implicits", // Warn if an implicit parameter is unused.
-//    "-Ywarn-unused:imports", // Warn if an import selector is not referenced.
-//    "-Ywarn-unused:locals", // Warn if a local definition is unused.
-//    "-Ywarn-unused:params", // Warn if a value parameter is unused.
-//    "-Ywarn-unused:patvars", // Warn if a variable bound in a pattern is unused.
-//    "-Ywarn-unused:privates" // Warn if a private member is unused.
-    //  "-Ywarn-value-discard"               // Warn when non-Unit expression results are unused.
+    "-Ywarn-unused:imports", // Warn if an import selector is not referenced.
+    "-Ywarn-unused:locals", // Warn if a local definition is unused.
+    "-Ywarn-unused:params", // Warn if a value parameter is unused.
+    "-Ywarn-unused:patvars", // Warn if a variable bound in a pattern is unused.
+    "-Ywarn-unused:privates", // Warn if a private member is unused.
+    "-Ywarn-value-discard" // Warn when non-Unit expression results are unused.
   ),
   testFrameworks += new TestFramework("org.scalameter.ScalaMeterFramework")
 )
@@ -81,7 +81,6 @@ lazy val core = (project in file("core"))
 
 lazy val example = (project in file("example"))
   .dependsOn(core)
-  .enablePlugins(ScalaxbPlugin)
   .settings(name := "example", parallelExecution in Test := false)
   .settings(commonSettings)
   .settings(
@@ -100,15 +99,7 @@ lazy val example = (project in file("example"))
       "org.http4s" %% "http4s-circe" % "0.20.15",
       "org.http4s" %% "http4s-scala-xml" % "0.20.15",
       "org.scalacheck" %% "scalacheck" % "1.14.3",
-      "org.scalaxb" %% "scalaxb" % "1.7.3",
       "org.typelevel" %% "cats-core" % "2.1.0",
       "org.typelevel" %% "cats-effect" % "2.0.0"
     )
-  )
-  .settings(
-    scalaxbDispatchVersion in (Compile, scalaxb) := "0.13.4",
-    scalaxbPackageNames in (Compile, scalaxb) := Map(
-      uri("http://schemas.datacontract.org/2020/01/Transaction.Model") -> "io.cassandra.example.model"
-    ),
-    scalaxbXsdSource in (Compile, scalaxb) := (resourceDirectory in Compile).value
   )

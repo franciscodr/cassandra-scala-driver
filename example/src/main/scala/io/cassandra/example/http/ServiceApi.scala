@@ -3,16 +3,17 @@ package io.cassandra.example.http
 import java.time.Instant
 import java.util.UUID
 
+import cats.data.NonEmptyList
 import cats.effect.IO
 import io.cassandra.example.http.auth.HttpRoutesWithBasicAuthentication
 import io.cassandra.example.http.codecs._
+import io.cassandra.example.http.model.Transaction
 import io.cassandra.example.model._
 import io.circe.Encoder
 import io.circe.syntax._
 import org.http4s._
 import org.http4s.circe._
 import org.http4s.dsl.io._
-import scalaxb.XMLFormat
 
 import scala.xml.NamespaceBinding
 
@@ -26,37 +27,18 @@ class ServiceApi(query: TransactionQuery) extends HeaderExtractors with QueryPar
         accountId,
         paymentMethods.getOrElse(Nil),
         extractIfModifiedSinceHeader(authedRequest.req),
-        extractAcceptHeader(authedRequest.req),
         limit.getOrElse(50),
         offset.getOrElse(0)
       )
   }
 
-  def buildResponse[A: Encoder: XMLFormat](contentType: ContentType, data: A): IO[Response[IO]] = {
-    contentType match {
-      case Json => Ok(data.asJson)
-      case Xml =>
-        Ok(
-          scalaxb
-            .toXML(
-              data,
-              namespace = None,
-              elementLabel = "transactions",
-              scope = NamespaceBinding(
-                prefix = null,
-                uri = "http://schemas.datacontract.org/2020/01/Transaction.Model",
-                parent = w3orgScope
-              )
-            )
-        )
-    }
-  }
+  def buildResponse[A: Encoder](data: List[A]): IO[Response[IO]] =
+    NonEmptyList.fromList(data).fold(NotFound())(list => Ok(list.asJson))
 
   def getTransactionsByAccountIdAndPaymentMethod(
     accountId: UUID,
     paymentMethods: List[PaymentMethod],
     modifiedSince: Option[Instant],
-    contentType: ContentType,
     limit: Long,
     offset: Long
   ): IO[Response[IO]] = {
@@ -77,7 +59,7 @@ class ServiceApi(query: TransactionQuery) extends HeaderExtractors with QueryPar
       .map(_.toTransactionResponse)
     for {
       transactions <- transactionStream.compile.toList
-      response <- buildResponse(contentType, Transactions(transactions))
+      response <- buildResponse(transactions)
     } yield response
   }.handleErrorWith { error =>
     InternalServerError(error.getMessage)

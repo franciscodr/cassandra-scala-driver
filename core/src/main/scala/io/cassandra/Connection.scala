@@ -77,7 +77,8 @@ object Connection extends CatsEffectConverters {
       fromCompletionStage[IO](
         DseSession.builder
           .addContactPoints(
-            config.hosts.split(",").map(InetSocketAddress.createUnresolved(_, 9042)).toList.asJava)
+            config.hosts.split(",").map(InetSocketAddress.createUnresolved(_, 9042)).toList.asJava
+          )
           .withConfigLoader(driverConfigLoader)
           .withKeyspace(config.keyspace)
           .withSslContextFromConfig(sslSettings)

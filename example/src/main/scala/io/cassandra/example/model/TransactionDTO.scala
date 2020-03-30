@@ -8,6 +8,7 @@ import cats.ApplicativeError
 import cats.syntax.functor._
 import com.datastax.oss.driver.api.core.cql.Row
 import io.cassandra.error.ConversionError
+import io.cassandra.example.http.model.Transaction
 import org.scalacheck.Arbitrary.arbitrary
 import org.scalacheck.Gen
 
@@ -25,7 +26,7 @@ case class TransactionDTO(
       transactionId = transactionId.toString,
       accountId = accountId.toString,
       orderAt = orderAt.toString,
-      amount = amount,
+      amount = amount.floatValue(),
       paymentMethod = paymentMethod.entryName
     )
 }
