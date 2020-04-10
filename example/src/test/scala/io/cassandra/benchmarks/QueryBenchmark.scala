@@ -5,6 +5,8 @@ import java.util.concurrent.Executors
 
 import cats.effect.{ContextShift, IO}
 import io.cassandra.Session
+import io.cassandra.config._
+import io.cassandra.example.config._
 import io.cassandra.example.model.PaymentMethod.ApplePay
 import io.cassandra.example.model.{NativeTransactionQuery, PaymentMethod, TransactionQuery}
 import io.chrisdavenport.log4cats.Logger
@@ -26,11 +28,13 @@ object QueryBenchmark extends Bench.LocalTime {
     Gen.enumeration("payment methods")(PaymentMethod.values: _*)
 
   implicit val logger: Logger[IO] = Slf4jLogger.create[IO].unsafeRunSync()
+  val config: CassandraConfig = loadConfig[IO, CassandraConfig]("example.cassandra").unsafeRunSync()
+
   val (session, releaseSession) =
-    Session.build("customer", 500).allocated.unsafeRunSync()
+    Session.build(config).allocated.unsafeRunSync()
 
   val (sessionForLargeQueries, releaseSessionForLargeQueries) =
-    Session.build("customer", 5000).allocated.unsafeRunSync()
+    Session.build(config.withRequestPageSize(5000)).allocated.unsafeRunSync()
 
   val query: TransactionQuery = TransactionQuery.build(session).unsafeRunSync()
 

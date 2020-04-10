@@ -26,7 +26,7 @@ case class TransactionDTO(
       transactionId = transactionId.toString,
       accountId = accountId.toString,
       orderAt = orderAt.toString,
-      amount = amount.floatValue(),
+      amount = amount.floatValue,
       paymentMethod = paymentMethod.entryName
     )
 }

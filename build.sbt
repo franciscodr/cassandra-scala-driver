@@ -1,6 +1,6 @@
 lazy val commonSettings = Seq(
   addCompilerPlugin("com.olegpy" %% "better-monadic-for" % "0.3.1"),
-  scalaVersion := "2.12.10",
+  scalaVersion := "2.13.1",
   scalacOptions ++= Seq(
     "-deprecation", // Emit warning and location for usages of deprecated APIs.
     "-encoding",
@@ -14,9 +14,7 @@ lazy val commonSettings = Seq(
     "-unchecked", // Enable additional warnings where generated code depends on assumptions.
     "-Xcheckinit", // Wrap field accessors to throw an exception on uninitialized access.
     "-Xfatal-warnings", // Fail the compilation if there are any warnings.
-    "-Xfuture", // Turn on future language features.
     "-Xlint:adapted-args", // Warn if an argument list is modified to match the receiver.
-    "-Xlint:by-name-right-associative", // By-name parameter of right associative operator.
     "-Xlint:constant", // Evaluation of a constant arithmetic expression results in an error.
     "-Xlint:delayedinit-select", // Selecting member of DelayedInit.
     "-Xlint:doc-detached", // A Scaladoc comment appears to be detached from its element.
@@ -31,15 +29,8 @@ lazy val commonSettings = Seq(
     "-Xlint:private-shadow", // A private field (or class parameter) shadows a superclass field.
     "-Xlint:stars-align", // Pattern sequence wildcard must align with sequence component.
     "-Xlint:type-parameter-shadow", // A local type parameter shadows a type already in scope.
-    "-Xlint:unsound-match", // Pattern match may not be typesafe.
-    "-Yno-adapted-args", // Do not adapt an argument list (either by inserting () or creating a tuple) to match the receiver.
-    "-Ypartial-unification", // Enable partial unification in type constructor inference
     "-Ywarn-dead-code", // Warn when dead code is identified.
     "-Ywarn-extra-implicit", // Warn when more than one implicit parameter section is defined.
-    "-Ywarn-inaccessible", // Warn about inaccessible types in method signatures.
-    "-Ywarn-infer-any", // Warn when a type argument is inferred to be `Any`.
-    "-Ywarn-nullary-override", // Warn when non-nullary `def f()' overrides nullary `def f'.
-    "-Ywarn-nullary-unit", // Warn when nullary methods return Unit.
     "-Ywarn-numeric-widen", // Warn when numerics are widened.
     "-Ywarn-unused:implicits", // Warn if an implicit parameter is unused.
     "-Ywarn-unused:imports", // Warn if an import selector is not referenced.
@@ -66,16 +57,17 @@ lazy val core = (project in file("core"))
   .settings(commonSettings)
   .settings(
     libraryDependencies ++= Seq(
-      "com.datastax.dse" % "dse-java-driver-core" % "2.3.0",
-      "com.datastax.dse" % "dse-java-driver-query-builder" % "2.3.0",
-      "co.fs2" %% "fs2-core" % "2.1.0",
-      "co.fs2" %% "fs2-reactive-streams" % "2.1.0",
+      "com.datastax.dse" % "dse-java-driver-core" % "2.4.0",
+      "com.datastax.dse" % "dse-java-driver-query-builder" % "2.4.0",
+      "commons-codec" % "commons-codec" % "1.14",
+      "co.fs2" %% "fs2-core" % "2.3.0",
+      "co.fs2" %% "fs2-reactive-streams" % "2.3.0",
       "io.chrisdavenport" %% "log4cats-core" % "1.0.1",
       "io.chrisdavenport" %% "log4cats-slf4j" % "1.0.1",
       "org.reactivestreams" % "reactive-streams" % "1.0.3",
-      "org.scala-lang.modules" % "scala-java8-compat_2.12" % "0.9.0",
-      "org.typelevel" %% "cats-core" % "2.1.0",
-      "org.typelevel" %% "cats-effect" % "2.0.0"
+      "org.scala-lang.modules" %% "scala-java8-compat" % "0.9.1",
+      "org.typelevel" %% "cats-core" % "2.1.1",
+      "org.typelevel" %% "cats-effect" % "2.1.2"
     )
   )
 
@@ -86,20 +78,21 @@ lazy val example = (project in file("example"))
   .settings(
     libraryDependencies ++= Seq(
       "ch.qos.logback" % "logback-classic" % "1.2.3",
-      "com.beachape" %% "enumeratum" % "1.5.14",
-      "com.beachape" %% "enumeratum-circe" % "1.5.14",
-      "com.storm-enroute" % "scalameter_2.12" % "0.19",
-      "co.fs2" %% "fs2-core" % "2.1.0",
+      "com.beachape" %% "enumeratum" % "1.5.15",
+      "com.beachape" %% "enumeratum-circe" % "1.5.23",
+      "com.github.pureconfig" %% "pureconfig" % "0.12.3",
+      "com.github.pureconfig" %% "pureconfig-cats" % "0.12.3",
+      "com.storm-enroute" %% "scalameter" % "0.19",
+      "co.fs2" %% "fs2-core" % "2.3.0",
       "io.chrisdavenport" %% "log4cats-core" % "1.0.1",
       "io.chrisdavenport" %% "log4cats-slf4j" % "1.0.1",
-      "io.circe" %% "circe-core" % "0.12.3",
-      "io.circe" %% "circe-generic" % "0.12.3",
-      "org.http4s" %% "http4s-dsl" % "0.20.15",
-      "org.http4s" %% "http4s-blaze-server" % "0.20.15",
-      "org.http4s" %% "http4s-circe" % "0.20.15",
-      "org.http4s" %% "http4s-scala-xml" % "0.20.15",
+      "io.circe" %% "circe-core" % "0.13.0",
+      "io.circe" %% "circe-generic" % "0.13.0",
+      "org.http4s" %% "http4s-dsl" % "0.21.3",
+      "org.http4s" %% "http4s-blaze-server" % "0.21.3",
+      "org.http4s" %% "http4s-circe" % "0.21.3",
       "org.scalacheck" %% "scalacheck" % "1.14.3",
-      "org.typelevel" %% "cats-core" % "2.1.0",
-      "org.typelevel" %% "cats-effect" % "2.0.0"
+      "org.typelevel" %% "cats-core" % "2.1.1",
+      "org.typelevel" %% "cats-effect" % "2.1.2"
     )
   )

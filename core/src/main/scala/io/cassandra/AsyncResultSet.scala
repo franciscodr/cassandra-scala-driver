@@ -10,7 +10,7 @@ import com.datastax.oss.driver.api.core.cql.{Row, AsyncResultSet => JavaAsyncRes
 import fs2.Stream
 import io.chrisdavenport.log4cats.Logger
 
-import scala.collection.JavaConverters._
+import scala.jdk.CollectionConverters._
 
 case class AsyncResultSet(resultSet: JavaAsyncResultSet) extends AnyVal {
 

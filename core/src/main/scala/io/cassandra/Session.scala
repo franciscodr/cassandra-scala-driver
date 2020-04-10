@@ -2,22 +2,20 @@ package io.cassandra
 
 import cats.effect.{ConcurrentEffect, ContextShift, IO, Resource}
 import cats.syntax.functor._
-import com.datastax.dse.driver.api.core.DseSession
 import com.datastax.dse.driver.api.core.cql.reactive.ReactiveRow
-import com.datastax.dse.driver.api.core.graph.{AsyncGraphResultSet, GraphStatement}
-import com.datastax.oss.driver.api.core.CqlIdentifier
 import com.datastax.oss.driver.api.core.cql.{
   PrepareRequest,
   PreparedStatement,
   SimpleStatement,
   Statement
 }
+import com.datastax.oss.driver.api.core.{CqlIdentifier, CqlSession}
 import fs2.interop.reactivestreams._
 import io.cassandra.config.CassandraConfig
 
 import scala.compat.java8.OptionConverters
 
-class Session[F[_]: ConcurrentEffect](session: DseSession) extends CatsEffectConverters {
+class Session[F[_]: ConcurrentEffect](session: CqlSession) extends CatsEffectConverters {
   def checkSchemaAgreement: F[Boolean] =
     fromCompletionStage[F](session.checkSchemaAgreementAsync()).map(b => Boolean.box(b))
 
@@ -30,9 +28,6 @@ class Session[F[_]: ConcurrentEffect](session: DseSession) extends CatsEffectCon
   def execute(query: Statement[_]): F[AsyncResultSet] =
     fromCompletionStage[F](session.executeAsync(query))
       .map(AsyncResultSet.apply)
-
-  def execute(query: GraphStatement[_]): F[AsyncGraphResultSet] =
-    fromCompletionStage[F](session.executeAsync(query))
 
   def executeStream(query: String): fs2.Stream[F, ReactiveRow] =
     session.executeReactive(query).toStream[F]
@@ -53,17 +48,17 @@ class Session[F[_]: ConcurrentEffect](session: DseSession) extends CatsEffectCon
 }
 
 object Session {
-  def buildAsStream(config: CassandraConfig, requestPageSize: Int)(
+  def buildAsStream(config: CassandraConfig)(
     implicit CS: ContextShift[IO]
   ): fs2.Stream[IO, Session[IO]] =
     Connection
-      .buildConnectionAsStream(config, requestPageSize)
+      .buildConnectionAsStream(config)
       .map(connection => new Session[IO](connection))
 
-  def build(config: CassandraConfig, requestPageSize: Int)(
+  def build(config: CassandraConfig)(
     implicit CS: ContextShift[IO]
   ): Resource[IO, Session[IO]] =
     Connection
-      .buildConnectionAsResource(config, requestPageSize)
+      .buildConnectionAsResource(config)
       .map(connection => new Session[IO](connection))
 }

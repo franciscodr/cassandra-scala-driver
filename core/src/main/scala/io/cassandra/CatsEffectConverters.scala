@@ -15,6 +15,7 @@ trait CatsEffectConverters {
             case Some(e) => cb(Left(e))
           }
         )
+        ()
       }
   }
 

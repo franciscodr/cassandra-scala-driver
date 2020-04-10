@@ -15,14 +15,12 @@ import org.http4s._
 import org.http4s.circe._
 import org.http4s.dsl.io._
 
-import scala.xml.NamespaceBinding
-
 class ServiceApi(query: TransactionQuery) extends HeaderExtractors with QueryParamMatchers {
   val httpService: HttpRoutes[IO] = HttpRoutesWithBasicAuthentication {
     case authedRequest @ GET -> Root / "order" / UUIDVar(accountId)
           :? PaymentMethodsQueryParamMatcher(paymentMethods)
             +& LimitQueryParamMatcher(limit)
-            +& OffsetQueryParamMatcher(offset) as account =>
+            +& OffsetQueryParamMatcher(offset) as _ =>
       getTransactionsByAccountIdAndPaymentMethod(
         accountId,
         paymentMethods.getOrElse(Nil),

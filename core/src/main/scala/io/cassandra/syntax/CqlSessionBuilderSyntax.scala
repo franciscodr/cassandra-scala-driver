@@ -3,16 +3,16 @@ package io.cassandra.syntax
 import java.io.ByteArrayInputStream
 import java.security.{KeyStore, SecureRandom}
 
-import com.datastax.dse.driver.api.core.DseSessionBuilder
+import com.datastax.oss.driver.api.core.CqlSessionBuilder
 import io.cassandra.config.SslConfig
 import javax.net.ssl.{SSLContext, TrustManagerFactory}
 import org.apache.commons.codec.binary.Base64
 
-object dseSessionBuilder extends DseSessionBuilderSyntax
+object cqlSessionBuilder extends CqlSessionBuilderSyntax
 
-trait DseSessionBuilderSyntax {
-  implicit class DseSessionBuilderOps(builder: DseSessionBuilder) {
-    def withSslContextFromConfig(config: Option[SslConfig]): DseSessionBuilder = {
+trait CqlSessionBuilderSyntax {
+  implicit class CqlSessionBuilderOps(builder: CqlSessionBuilder) {
+    def withSslContextFromConfig(config: Option[SslConfig]): CqlSessionBuilder = {
       config.fold(builder) { sslConfig =>
         val ks = KeyStore.getInstance("JKS")
         val tmf = TrustManagerFactory.getInstance(TrustManagerFactory.getDefaultAlgorithm)

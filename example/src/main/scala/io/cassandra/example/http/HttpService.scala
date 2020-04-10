@@ -3,6 +3,8 @@ package io.cassandra.example.http
 import cats.effect.{ExitCode, IO, IOApp}
 import cats.syntax.functor._
 import io.cassandra.Session
+import io.cassandra.config.CassandraConfig
+import io.cassandra.example.config._
 import io.cassandra.example.model.TransactionQuery
 import io.chrisdavenport.log4cats.Logger
 import io.chrisdavenport.log4cats.slf4j.Slf4jLogger
@@ -15,7 +17,8 @@ object HttpService extends IOApp {
   override def run(args: List[String]): IO[ExitCode] = {
     val ingestionStream = for {
       implicit0(logger: Logger[IO]) <- fs2.Stream.eval(Slf4jLogger.create[IO])
-      session <- Session.buildAsStream("customer", 500)
+      config <- loadConfigAsStream[IO, CassandraConfig]("example")
+      session <- Session.buildAsStream(config)
       query <- TransactionQuery.buildAsStream(session)
       stream <- BlazeServerBuilder[IO]
         .bindHttp(8080, "0.0.0.0")

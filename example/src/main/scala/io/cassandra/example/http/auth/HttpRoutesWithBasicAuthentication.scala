@@ -23,7 +23,7 @@ trait BasicAuthentication {
   })
 
   val onFailure: AuthedRoutes[ServiceError, IO] =
-    Kleisli(request => OptionT.liftF(Forbidden(request.authInfo)))
+    Kleisli(request => OptionT.liftF(Forbidden(request.context)))
 
   val middleware: AuthMiddleware[IO, String] = AuthMiddleware(authUser, onFailure)
 }

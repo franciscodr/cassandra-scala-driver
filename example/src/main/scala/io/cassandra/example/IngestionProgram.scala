@@ -3,6 +3,8 @@ package io.cassandra.example
 import cats.effect.{ExitCode, IO, IOApp}
 import cats.syntax.functor._
 import io.cassandra.Session
+import io.cassandra.config._
+import io.cassandra.example.config._
 import io.cassandra.example.model.{TransactionDTO, TransactionQuery}
 import io.chrisdavenport.log4cats.Logger
 import io.chrisdavenport.log4cats.slf4j.Slf4jLogger
@@ -11,8 +13,9 @@ object IngestionProgram extends IOApp {
   override def run(args: List[String]): IO[ExitCode] = {
     for {
       implicit0(logger: Logger[IO]) <- fs2.Stream.eval(Slf4jLogger.create[IO])
+      config <- loadConfigAsStream[IO, CassandraConfig]("example.cassandra")
       session <- Session
-        .buildAsStream("customer", 500)
+        .buildAsStream(config)
         .evalTap(_ => logger.info("Database session opened"))
       query <- TransactionQuery
         .buildAsStream(session)

@@ -3,9 +3,12 @@ package io.cassandra.example
 import java.text.NumberFormat
 import java.util.UUID
 
+import cats.effect.IO._
 import cats.effect.{ExitCode, IO, IOApp}
 import cats.syntax.functor._
 import io.cassandra.Session
+import io.cassandra.config._
+import io.cassandra.example.config._
 import io.cassandra.example.model.NativeTransactionQuery
 import io.cassandra.example.model.PaymentMethod.{ApplePay, Cash, CreditCard, GooglePay, SvcCard}
 import io.chrisdavenport.log4cats.Logger
@@ -21,7 +24,8 @@ object ConsumerProgram extends IOApp {
   override def run(args: List[String]): IO[ExitCode] = {
     for {
       implicit0(logger: Logger[IO]) <- fs2.Stream.eval(Slf4jLogger.create[IO])
-      session <- Session.buildAsStream("customer", 500)
+      config <- loadConfigAsStream[IO, CassandraConfig]("example.cassandra")
+      session <- Session.buildAsStream(config)
       query <- NativeTransactionQuery.buildAsStream(session)
       applePayCount <- query.countTransactionsByAccountIdAndPaymentMethod(
         UUID.fromString("9158b076-38a2-480e-a1fe-32efc2448ac1"),
